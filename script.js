@@ -93,30 +93,57 @@ function setupLightbox() {
     const lightbox = document.getElementById('lightbox');
     const lightboxImage = document.querySelector('.lightbox-image');
     const lightboxClose = document.querySelector('.lightbox-close');
-    const images = document.querySelectorAll('.gallery-image');
+    const images = Array.from(document.querySelectorAll('.gallery-image'));
+    let currentIndex = -1;
 
-    images.forEach(img => {
+    function openLightbox(index) {
+        const img = images[index];
+        if (!img) return;
+        currentIndex = index;
+        lightboxImage.src = img.dataset.full;
+        lightboxImage.alt = img.alt;
+        lightbox.classList.add('active');
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+    }
+
+    function moveLightbox(step) {
+        if (!lightbox.classList.contains('active')) return;
+        const nextIndex = (currentIndex + step + images.length) % images.length;
+        openLightbox(nextIndex);
+    }
+
+    images.forEach((img, index) => {
         img.addEventListener('click', function() {
-            lightbox.classList.add('active');
-            lightboxImage.src = this.dataset.full;
-            lightboxImage.alt = this.alt;
+            openLightbox(index);
         });
     });
 
-    lightboxClose.addEventListener('click', function() {
-        lightbox.classList.remove('active');
-    });
+    lightboxClose.addEventListener('click', closeLightbox);
 
     lightbox.addEventListener('click', function(e) {
         if (e.target === lightbox) {
-            lightbox.classList.remove('active');
+            closeLightbox();
         }
     });
 
-    // Keyboard navigation
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            lightbox.classList.remove('active');
+        if (!lightbox.classList.contains('active')) return;
+
+        switch (e.key) {
+            case 'Escape':
+                closeLightbox();
+                break;
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                moveLightbox(-1);
+                break;
+            case 'ArrowRight':
+            case 'ArrowDown':
+                moveLightbox(1);
+                break;
         }
     });
 }
