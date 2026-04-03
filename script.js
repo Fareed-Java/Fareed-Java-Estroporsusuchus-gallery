@@ -170,4 +170,19 @@ if (musicToggle && backgroundMusic) {
     backgroundMusic.addEventListener('pause', function() {
         musicToggle.textContent = 'Play Music';
     });
+
+    const audioFileInput = document.getElementById('audio-file');
+    if (audioFileInput) {
+        audioFileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // If video, extract audio via blob URL playback; browser will handle video file audio output.
+            const objectUrl = URL.createObjectURL(file);
+            backgroundMusic.src = objectUrl;
+            backgroundMusic.load();
+            backgroundMusic.play().catch(() => {});
+            musicToggle.textContent = 'Pause Music';
+        });
+    }
 }
