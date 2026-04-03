@@ -147,3 +147,27 @@ function setupLightbox() {
         }
     });
 }
+
+// Auto-play music control (user-triggered)
+const musicToggle = document.getElementById('music-toggle');
+const backgroundMusic = document.getElementById('background-music');
+
+if (musicToggle && backgroundMusic) {
+    musicToggle.addEventListener('click', function() {
+        if (backgroundMusic.paused) {
+            backgroundMusic.play().catch(() => {});
+            musicToggle.textContent = 'Pause Music';
+        } else {
+            backgroundMusic.pause();
+            musicToggle.textContent = 'Play Music';
+        }
+    });
+
+    backgroundMusic.addEventListener('play', function() {
+        musicToggle.textContent = 'Pause Music';
+    });
+
+    backgroundMusic.addEventListener('pause', function() {
+        musicToggle.textContent = 'Play Music';
+    });
+}
