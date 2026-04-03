@@ -93,18 +93,21 @@ section > p {
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 0.1rem;
+    gap: 0;
     margin-bottom: 2rem;
+    grid-template-rows: 200px;
 }
 
 .gallery-grid img {
     width: 100%;
-    height: 200px;
+    height: 100%;
     display: block;
     object-fit: cover;
     border-radius: 0;
     cursor: pointer;
     transition: opacity 0.3s ease;
+    padding: 0;
+    margin: 0;
 }
 
 .gallery-grid img:hover {
