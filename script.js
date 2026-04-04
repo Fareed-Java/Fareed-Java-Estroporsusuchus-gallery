@@ -259,7 +259,7 @@ if (musicToggle && backgroundMusic) {
         });
     }
 
-    fetch('media/playlist.json')
+    fetch(`media/playlist.json?v=${Date.now()}`)
         .then(response => response.json())
         .then(setPlaylist)
         .catch(() => {
