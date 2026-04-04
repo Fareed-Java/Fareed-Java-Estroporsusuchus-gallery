@@ -172,17 +172,47 @@ if (musicToggle && backgroundMusic) {
     });
 
     const audioFileInput = document.getElementById('audio-file');
+    const randomTrackButton = document.getElementById('random-track');
+    let localPlaylist = [];
+    let currentLocalUrl = null;
+
+    function setLocalTrack(file) {
+        if (!file) return;
+        if (currentLocalUrl) {
+            URL.revokeObjectURL(currentLocalUrl);
+        }
+        currentLocalUrl = URL.createObjectURL(file);
+        backgroundMusic.src = currentLocalUrl;
+        backgroundMusic.load();
+        backgroundMusic.play().catch(() => {});
+        musicToggle.textContent = 'Pause Music';
+    }
+
+    function playRandomTrack() {
+        if (!localPlaylist.length) return;
+        const randomIndex = Math.floor(Math.random() * localPlaylist.length);
+        setLocalTrack(localPlaylist[randomIndex]);
+    }
+
     if (audioFileInput) {
         audioFileInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            localPlaylist = Array.from(event.target.files);
+            if (!localPlaylist.length) return;
+            if (localPlaylist.length === 1) {
+                setLocalTrack(localPlaylist[0]);
+            } else {
+                playRandomTrack();
+            }
+        });
+    }
 
-            // If video, extract audio via blob URL playback; browser will handle video file audio output.
-            const objectUrl = URL.createObjectURL(file);
-            backgroundMusic.src = objectUrl;
-            backgroundMusic.load();
-            backgroundMusic.play().catch(() => {});
-            musicToggle.textContent = 'Pause Music';
+    if (randomTrackButton) {
+        randomTrackButton.addEventListener('click', function() {
+            if (localPlaylist.length > 0) {
+                playRandomTrack();
+            } else {
+                musicToggle.textContent = 'Play Music';
+            }
         });
     }
 }

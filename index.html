@@ -24,8 +24,11 @@
                     <source src="1-01 Catch You Catch Me.mp3" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
-                <button id="music-toggle" type="button">Play Music</button>
-                <input id="audio-file" type="file" accept="audio/*,video/*" title="Select local audio/video file" />
+                <div class="audio-actions">
+                    <button id="music-toggle" type="button">Play Music</button>
+                    <button id="random-track" type="button">Random Track</button>
+                    <input id="audio-file" type="file" accept="audio/*,video/*" multiple title="Select audio/video files to play randomly" />
+                </div>
             </div>
         </div>
     </header>
