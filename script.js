@@ -171,48 +171,39 @@ if (musicToggle && backgroundMusic) {
         musicToggle.textContent = 'Play Music';
     });
 
-    const audioFileInput = document.getElementById('audio-file');
     const randomTrackButton = document.getElementById('random-track');
-    let localPlaylist = [];
-    let currentLocalUrl = null;
+    let playlist = [
+        '1-01 Catch You Catch Me.mp3'
+    ];
 
-    function setLocalTrack(file) {
-        if (!file) return;
-        if (currentLocalUrl) {
-            URL.revokeObjectURL(currentLocalUrl);
-        }
-        currentLocalUrl = URL.createObjectURL(file);
-        backgroundMusic.src = currentLocalUrl;
+    function setPlaylist(tracks) {
+        playlist = tracks;
+        playRandomTrack();
+    }
+
+    function playTrack(fileName) {
+        backgroundMusic.src = `media/${fileName}`;
         backgroundMusic.load();
         backgroundMusic.play().catch(() => {});
         musicToggle.textContent = 'Pause Music';
     }
 
     function playRandomTrack() {
-        if (!localPlaylist.length) return;
-        const randomIndex = Math.floor(Math.random() * localPlaylist.length);
-        setLocalTrack(localPlaylist[randomIndex]);
+        if (!playlist.length) return;
+        const randomIndex = Math.floor(Math.random() * playlist.length);
+        playTrack(playlist[randomIndex]);
     }
 
-    if (audioFileInput) {
-        audioFileInput.addEventListener('change', function(event) {
-            localPlaylist = Array.from(event.target.files);
-            if (!localPlaylist.length) return;
-            if (localPlaylist.length === 1) {
-                setLocalTrack(localPlaylist[0]);
-            } else {
-                playRandomTrack();
-            }
+    fetch('media/playlist.json')
+        .then(response => response.json())
+        .then(setPlaylist)
+        .catch(() => {
+            // fallback to default playlist
         });
-    }
 
     if (randomTrackButton) {
         randomTrackButton.addEventListener('click', function() {
-            if (localPlaylist.length > 0) {
-                playRandomTrack();
-            } else {
-                musicToggle.textContent = 'Play Music';
-            }
+            playRandomTrack();
         });
     }
 }
