@@ -151,6 +151,77 @@ function setupLightbox() {
 // Auto-play music control (user-triggered)
 const musicToggle = document.getElementById('music-toggle');
 const backgroundMusic = document.getElementById('background-music');
+const prevTrackButton = document.getElementById('prev-track');
+const nextTrackButton = document.getElementById('next-track');
+const randomTrackButton = document.getElementById('random-track');
+const uploadTrackInput = document.getElementById('upload-track');
+
+let playlist = [];
+let currentTrackIndex = 0;
+
+function formatTrackName(fileName) {
+    return fileName.replace(/^(.*\/)?/, '').replace(/\.[^/.]+$/, '');
+}
+
+function isSupportedAudioTrack(track) {
+    if (!track || !track.src) return false;
+    const ext = track.src.split('.').pop().toLowerCase();
+    return ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext);
+}
+
+function playTrackByIndex(index) {
+    if (!playlist.length || index < 0 || index >= playlist.length) return;
+    currentTrackIndex = index;
+    const track = playlist[currentTrackIndex];
+    backgroundMusic.src = track.src;
+    backgroundMusic.load();
+    backgroundMusic.play().catch(() => {});
+    if (musicToggle) musicToggle.textContent = 'Pause Music';
+}
+
+function playPreviousTrack() {
+    if (!playlist.length) return;
+    playTrackByIndex((currentTrackIndex - 1 + playlist.length) % playlist.length);
+}
+
+function playNextTrack() {
+    if (!playlist.length) return;
+    playTrackByIndex((currentTrackIndex + 1) % playlist.length);
+}
+
+function playRandomTrack() {
+    if (!playlist.length) return;
+    const randomIndex = Math.floor(Math.random() * playlist.length);
+    playTrackByIndex(randomIndex);
+}
+
+function setPlaylist(tracks) {
+    if (!Array.isArray(tracks)) return;
+    const normalized = tracks
+        .map(track => (typeof track === 'string'
+            ? { name: formatTrackName(track), src: `media/${track}` }
+            : track
+        ))
+        .filter(isSupportedAudioTrack);
+
+    if (!normalized.length) return;
+    playlist = normalized;
+    currentTrackIndex = 0;
+    backgroundMusic.src = playlist[0].src;
+    backgroundMusic.load();
+    if (musicToggle) musicToggle.textContent = 'Play Music';
+}
+
+function addUploadedTracks(files) {
+    if (!files || !files.length) return;
+
+    Array.from(files).forEach(file => {
+        const mimeType = (file.type || '').toLowerCase();
+        if (!mimeType.startsWith('audio/')) return;
+        const src = URL.createObjectURL(file);
+        playlist.push({ name: formatTrackName(file.name), src });
+    });
+}
 
 if (musicToggle && backgroundMusic) {
     musicToggle.addEventListener('click', function() {
@@ -171,39 +242,27 @@ if (musicToggle && backgroundMusic) {
         musicToggle.textContent = 'Play Music';
     });
 
-    const randomTrackButton = document.getElementById('random-track');
-    let playlist = [
-        '1-01 Catch You Catch Me.mp3'
-    ];
+    backgroundMusic.addEventListener('error', function() {
+        playNextTrack();
+    });
 
-    function setPlaylist(tracks) {
-        playlist = tracks;
-        playRandomTrack();
-    }
+    backgroundMusic.addEventListener('ended', function() {
+        playNextTrack();
+    });
 
-    function playTrack(fileName) {
-        backgroundMusic.src = `media/${fileName}`;
-        backgroundMusic.load();
-        backgroundMusic.play().catch(() => {});
-        musicToggle.textContent = 'Pause Music';
-    }
-
-    function playRandomTrack() {
-        if (!playlist.length) return;
-        const randomIndex = Math.floor(Math.random() * playlist.length);
-        playTrack(playlist[randomIndex]);
+    if (prevTrackButton) prevTrackButton.addEventListener('click', playPreviousTrack);
+    if (nextTrackButton) nextTrackButton.addEventListener('click', playNextTrack);
+    if (randomTrackButton) randomTrackButton.addEventListener('click', playRandomTrack);
+    if (uploadTrackInput) {
+        uploadTrackInput.addEventListener('change', function() {
+            addUploadedTracks(this.files);
+        });
     }
 
     fetch('media/playlist.json')
         .then(response => response.json())
         .then(setPlaylist)
         .catch(() => {
-            // fallback to default playlist
+            console.warn('Unable to load media/playlist.json');
         });
-
-    if (randomTrackButton) {
-        randomTrackButton.addEventListener('click', function() {
-            playRandomTrack();
-        });
-    }
 }

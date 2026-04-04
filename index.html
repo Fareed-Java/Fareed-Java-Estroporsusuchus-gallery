@@ -20,13 +20,19 @@
                 <a href="#">Print Store</a>
             </nav>
             <div class="audio-control">
-                <audio id="background-music" controls loop>
-                    <source src="media/1-01 Catch You Catch Me.mp3" type="audio/mpeg">
+                <audio id="background-music" controls>
+                    <source src="media/last summer whisper .mp3" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
                 <div class="audio-actions">
                     <button id="music-toggle" type="button">Play Music</button>
+                    <button id="prev-track" type="button">Prev</button>
+                    <button id="next-track" type="button">Next</button>
                     <button id="random-track" type="button">Random Track</button>
+                    <label class="upload-label">
+                        Upload song
+                        <input id="upload-track" type="file" accept="audio/*" multiple title="Upload audio files" />
+                    </label>
                 </div>
             </div>
         </div>
