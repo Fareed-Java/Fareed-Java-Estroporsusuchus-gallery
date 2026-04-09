@@ -187,11 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadGallery(galleryId, images) {
     const grid = document.querySelector(`#${galleryId} .gallery-grid`);
     const loadMoreBtn = document.querySelector(`#${galleryId} .load-more`);
-    let visibleCount = 12; // Show first 12 images
 
-    function showImages(count) {
+    function showImages() {
         grid.innerHTML = '';
-        images.slice(0, count).forEach((imgObj, index) => {
+        images.forEach((imgObj, index) => {
             const imgElement = document.createElement('img');
             imgElement.src = imgObj.folder + imgObj.src;
             imgElement.alt = imgObj.src;
@@ -202,21 +201,10 @@ function loadGallery(galleryId, images) {
     }
 
     if (images.length > 0) {
-        showImages(visibleCount);
-        if (images.length > visibleCount) {
-            loadMoreBtn.style.display = 'block';
-            loadMoreBtn.addEventListener('click', function() {
-                visibleCount += 12;
-                showImages(visibleCount);
-                if (visibleCount >= images.length) {
-                    loadMoreBtn.style.display = 'none';
-                }
-                setupLightbox();
-            });
-        } else {
-            loadMoreBtn.style.display = 'none';
-        }
-    } else {
+        showImages();
+    }
+
+    if (loadMoreBtn) {
         loadMoreBtn.style.display = 'none';
     }
 }
