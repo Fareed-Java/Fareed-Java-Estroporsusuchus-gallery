@@ -248,3 +248,5 @@ if (musicToggle && backgroundMusic) {
             console.warn('Unable to load media/playlist.json');
         });
 }
+
+
