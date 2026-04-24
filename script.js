@@ -3,7 +3,7 @@ let allImages = [];
 
 async function loadImages() {
     try {
-        const response = await fetch('images.json');
+        const response = await fetch(`images.json?v=${Date.now()}`);
         allImages = await response.json();
     } catch (error) {
         console.error('Failed to load images:', error);
@@ -20,10 +20,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 function loadGallery(galleryId, images) {
     const grid = document.querySelector(`#${galleryId} .gallery-grid`);
-    const loadMoreBtn = document.querySelector(`#${galleryId} .load-more`);
 
     let displayedImages = 0;
     const batchSize = 20;
+    const loadThresholdPx = 250;
 
     function showImages() {
         const endIndex = Math.min(displayedImages + batchSize, images.length);
@@ -34,31 +34,33 @@ function loadGallery(galleryId, images) {
             imgElement.alt = imgObj.src;
             imgElement.dataset.full = imgObj.folder + imgObj.src;
             imgElement.classList.add('gallery-image');
+            imgElement.loading = 'lazy';
             grid.appendChild(imgElement);
         }
         displayedImages = endIndex;
+    }
 
-        // Update load more button
+    function loadMoreOnScroll() {
         if (displayedImages >= images.length) {
-            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-        } else {
-            if (loadMoreBtn) loadMoreBtn.style.display = 'block';
+            window.removeEventListener('scroll', loadMoreOnScroll);
+            window.removeEventListener('resize', loadMoreOnScroll);
+            return;
+        }
+
+        const scrollPosition = window.innerHeight + window.scrollY;
+        const threshold = document.documentElement.scrollHeight - loadThresholdPx;
+        if (scrollPosition >= threshold) {
+            showImages();
         }
     }
 
-    function loadMore() {
-        showImages();
-    }
-
-    // Initial load
     if (images.length > 0) {
         showImages();
+        loadMoreOnScroll();
     }
 
-    // Attach load more event
-    if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', loadMore);
-    }
+    window.addEventListener('scroll', loadMoreOnScroll);
+    window.addEventListener('resize', loadMoreOnScroll);
 }
 
 function setupLightbox() {
