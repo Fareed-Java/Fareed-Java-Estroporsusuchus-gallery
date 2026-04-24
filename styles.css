@@ -1,8 +1,7 @@
-// GitHub 仓库配置
 const username = 'Fareed-Java';
 const repo = 'Fareed-Java-Estroporsusuchus-gallery';
 
-// 这里的 ID 必须对应你 HTML 里的 section id 或 div id
+// 确保这里的 key (左边) 和你 HTML 里的 div id 完全一致
 const categories = {
     'dinosaurs': 'images/dinosaurs',
     'marine-reptiles': 'images/marine-reptiles',
@@ -12,33 +11,32 @@ const categories = {
 
 async function loadGallery() {
     for (const [id, path] of Object.entries(categories)) {
-        // 寻找你的 grid 容器，假设你的 HTML 里有 <div id="dinosaurs" class="gallery-grid"></div>
         const container = document.getElementById(id);
-        if (!container) continue;
+        if (!container) {
+            console.warn(`找不到 ID 为 "${id}" 的容器，跳过该分类。`);
+            continue;
+        }
 
         try {
-            // 获取 GitHub 仓库对应文件夹下的文件列表
-            const response = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${path}`);
+            // 获取文件列表
+            const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${path}`;
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) throw new Error('GitHub API 请求失败');
+            
             const files = await response.json();
+            const imageFiles = files.filter(file => /\.(jpe?g|png|gif|webp)$/i.test(file.name));
 
-            if (!Array.isArray(files)) continue;
-
-            // 过滤图片文件
-            const imageFiles = files.filter(file => 
-                /\.(jpe?g|png|gif|webp)$/i.test(file.name)
-            );
-
-            // 清空容器（防止重复加载）
-            container.innerHTML = '';
+            container.innerHTML = ''; 
 
             imageFiles.forEach(file => {
-                // 创建 img 标签，完全匹配你 CSS 里的 .gallery-grid img 选择器
                 const img = document.createElement('img');
+                // 使用 download_url 确保能直接访问到原始图片
                 img.src = file.download_url;
                 img.alt = file.name;
                 img.loading = "lazy";
 
-                // 绑定你 CSS 里已经写好的 Lightbox (灯箱) 点击事件
+                // 点击灯箱逻辑
                 img.onclick = () => {
                     const lightbox = document.querySelector('.lightbox');
                     const lightboxImg = document.querySelector('.lightbox-image');
@@ -51,17 +49,19 @@ async function loadGallery() {
                 container.appendChild(img);
             });
         } catch (error) {
-            console.error(`无法从 ${path} 加载图片:`, error);
+            console.error(`加载 ${path} 出错:`, error);
+            // 如果 API 报错，这里可以放几个死代码测试一下路径是否正确
+            container.innerHTML = `<p style="color:red">该分类图片加载失败，请检查文件夹路径或 GitHub API 限制。</p>`;
         }
     }
 }
 
-// 确保页面加载完再跑脚本
 document.addEventListener('DOMContentLoaded', loadGallery);
 
-// 灯箱关闭逻辑（匹配你的 HTML 结构）
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('lightbox') || e.target.classList.contains('lightbox-close')) {
-        document.querySelector('.lightbox').classList.remove('active');
+// 灯箱关闭
+window.onclick = function(event) {
+    const lightbox = document.querySelector('.lightbox');
+    if (event.target == lightbox || event.target.className === 'lightbox-close') {
+        lightbox.classList.remove('active');
     }
-});
+};
