@@ -1,6 +1,73 @@
 // Gallery initialization
+const GITHUB_OWNER = 'Fareed-Java';
+const GITHUB_REPO = 'Fareed-Java-Estroporsusuchus-gallery';
+const GITHUB_BRANCH = 'main';
+const IMAGE_ROOT = 'images';
+
+function isImageFile(name) {
+    return /\.(jpe?g|png|gif|webp)$/i.test(name);
+}
+
+async function fetchImagesFromGitHub() {
+    const apiRoot = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${IMAGE_ROOT}?ref=${GITHUB_BRANCH}`;
+    const response = await fetch(apiRoot);
+    if (!response.ok) {
+        throw new Error(`GitHub API root request failed (${response.status})`);
+    }
+
+    const entries = await response.json();
+    const imageEntries = [];
+
+    for (const entry of entries) {
+        if (entry.type !== 'dir') continue;
+        const dirResponse = await fetch(`${entry.url}?ref=${GITHUB_BRANCH}`);
+        if (!dirResponse.ok) continue;
+
+        const files = await dirResponse.json();
+        for (const file of files) {
+            if (file.type === 'file' && isImageFile(file.name)) {
+                imageEntries.push({
+                    src: file.name,
+                    folder: `${entry.path}/`
+                });
+            }
+        }
+    }
+
+    return imageEntries;
+}
+
+async function loadImages() {
+    let images = [];
+
+    try {
+        const response = await fetch(`images.json?v=${Date.now()}`);
+        if (response.ok) {
+            images = await response.json();
+        }
+    } catch (error) {
+        console.warn('Failed to load images.json:', error);
+    }
+
+    try {
+        const githubImages = await fetchImagesFromGitHub();
+        const seen = new Set(images.map(img => `${img.folder}${img.src}`));
+        for (const image of githubImages) {
+            const key = `${image.folder}${image.src}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                images.push(image);
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to load images from GitHub folder listings:', error);
+    }
+
+    return images;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    const images = await fetch(`images.json?v=${Date.now()}`).then(r => r.json()).catch(() => []);
+    const images = await loadImages();
     initGallery(images);
     initLightbox();
     initMusic();
