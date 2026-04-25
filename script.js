@@ -1,254 +1,143 @@
-// Load images from JSON
-let allImages = [];
-
-async function loadImages() {
-    try {
-        const response = await fetch(`images.json?v=${Date.now()}`);
-        allImages = await response.json();
-    } catch (error) {
-        console.error('Failed to load images:', error);
-        // Fallback to empty array or handle error
-        allImages = [];
-    }
-}
-
-document.addEventListener('DOMContentLoaded', async function() {
-    await loadImages();
-    loadGallery('paintings-gallery', allImages);
-    setupLightbox();
+// Gallery initialization
+document.addEventListener('DOMContentLoaded', async () => {
+    const images = await fetch(`images.json?v=${Date.now()}`).then(r => r.json()).catch(() => []);
+    initGallery(images);
+    initLightbox();
+    initMusic();
 });
 
-function loadGallery(galleryId, images) {
-    const grid = document.querySelector(`#${galleryId} .gallery-grid`);
+// Gallery with infinite scroll
+function initGallery(images) {
+    const grid = document.querySelector('.gallery-grid');
+    let displayed = 0;
+    const batch = 20;
+    const threshold = 250;
 
-    let displayedImages = 0;
-    const batchSize = 20;
-    const loadThresholdPx = 250;
-
-    function showImages() {
-        const endIndex = Math.min(displayedImages + batchSize, images.length);
-        for (let i = displayedImages; i < endIndex; i++) {
-            const imgObj = images[i];
-            const imgElement = document.createElement('img');
-            imgElement.src = imgObj.folder + imgObj.src;
-            imgElement.alt = imgObj.src;
-            imgElement.dataset.full = imgObj.folder + imgObj.src;
-            imgElement.classList.add('gallery-image');
-            imgElement.loading = 'lazy';
-            grid.appendChild(imgElement);
+    function loadBatch() {
+        const end = Math.min(displayed + batch, images.length);
+        for (let i = displayed; i < end; i++) {
+            const img = document.createElement('img');
+            img.src = images[i].folder + images[i].src;
+            img.alt = images[i].src;
+            img.dataset.full = images[i].folder + images[i].src;
+            img.classList.add('gallery-image');
+            img.loading = 'lazy';
+            grid.appendChild(img);
         }
-        displayedImages = endIndex;
+        displayed = end;
     }
 
-    function loadMoreOnScroll() {
-        if (displayedImages >= images.length) {
-            window.removeEventListener('scroll', loadMoreOnScroll);
-            window.removeEventListener('resize', loadMoreOnScroll);
-            return;
-        }
-
-        const scrollPosition = window.innerHeight + window.scrollY;
-        const threshold = document.documentElement.scrollHeight - loadThresholdPx;
-        if (scrollPosition >= threshold) {
-            showImages();
+    function checkScroll() {
+        if (displayed >= images.length) return;
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - threshold) {
+            loadBatch();
         }
     }
 
-    if (images.length > 0) {
-        showImages();
-        loadMoreOnScroll();
-    }
-
-    window.addEventListener('scroll', loadMoreOnScroll);
-    window.addEventListener('resize', loadMoreOnScroll);
+    loadBatch();
+    window.addEventListener('scroll', checkScroll);
+    window.addEventListener('resize', checkScroll);
 }
 
-function setupLightbox() {
+// Lightbox modal
+function initLightbox() {
     const lightbox = document.getElementById('lightbox');
-    const lightboxImage = document.querySelector('.lightbox-image');
-    const lightboxClose = document.querySelector('.lightbox-close');
-    let currentIndex = -1;
+    const img = document.querySelector('.lightbox-image');
+    let idx = -1;
 
     function getImages() {
         return Array.from(document.querySelectorAll('.gallery-image'));
     }
 
-    function openLightbox(index) {
-        const images = getImages();
-        const img = images[index];
-        if (!img) return;
-        currentIndex = index;
-        lightboxImage.src = img.dataset.full;
-        lightboxImage.alt = img.alt;
+    function open(index) {
+        const allImg = getImages();
+        if (!allImg[index]) return;
+        idx = index;
+        img.src = allImg[index].dataset.full;
         lightbox.classList.add('active');
     }
 
-    function closeLightbox() {
+    function close() {
         lightbox.classList.remove('active');
     }
 
-    function moveLightbox(step) {
+    function move(step) {
         if (!lightbox.classList.contains('active')) return;
-        const images = getImages();
-        const nextIndex = (currentIndex + step + images.length) % images.length;
-        openLightbox(nextIndex);
+        const allImg = getImages();
+        open((idx + step + allImg.length) % allImg.length);
     }
 
-    // Event delegation for images
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', e => {
         if (e.target.classList.contains('gallery-image')) {
-            const images = getImages();
-            const index = images.indexOf(e.target);
-            if (index !== -1) {
-                openLightbox(index);
-            }
+            open(getImages().indexOf(e.target));
         }
+        if (e.target === lightbox) close();
     });
 
-    lightboxClose.addEventListener('click', closeLightbox);
+    document.querySelector('.lightbox-close').addEventListener('click', close);
 
-    lightbox.addEventListener('click', function(e) {
-        if (e.target === lightbox) {
-            closeLightbox();
-        }
-    });
-
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', e => {
         if (!lightbox.classList.contains('active')) return;
-
-        switch (e.key) {
-            case 'Escape':
-                closeLightbox();
-                break;
-            case 'ArrowLeft':
-            case 'ArrowUp':
-                moveLightbox(-1);
-                break;
-            case 'ArrowRight':
-            case 'ArrowDown':
-                moveLightbox(1);
-                break;
-        }
+        if (e.key === 'Escape') close();
+        if (['ArrowLeft', 'ArrowUp'].includes(e.key)) move(-1);
+        if (['ArrowRight', 'ArrowDown'].includes(e.key)) move(1);
     });
 }
 
-// Auto-play music control (user-triggered)
-const musicToggle = document.getElementById('music-toggle');
-const backgroundMusic = document.getElementById('background-music');
-const prevTrackButton = document.getElementById('prev-track');
-const nextTrackButton = document.getElementById('next-track');
-const randomTrackButton = document.getElementById('random-track');
-const uploadTrackInput = document.getElementById('upload-track');
+// Music player
+function initMusic() {
+    const audio = document.getElementById('background-music');
+    const btn = document.getElementById('music-toggle');
+    const prev = document.getElementById('prev-track');
+    const next = document.getElementById('next-track');
+    const rand = document.getElementById('random-track');
+    const upload = document.getElementById('upload-track');
 
-let playlist = [];
-let currentTrackIndex = 0;
+    if (!audio || !btn) return;
 
-function formatTrackName(fileName) {
-    return fileName.replace(/^(.*\/)?/, '').replace(/\.[^/.]+$/, '');
-}
+    let playlist = [];
+    let current = 0;
 
-function isSupportedAudioTrack(track) {
-    if (!track || !track.src) return false;
-    const ext = track.src.split('.').pop().toLowerCase();
-    return ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext);
-}
+    const isAudio = f => ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(f.split('.').pop().toLowerCase());
+    const play = (i) => {
+        if (!playlist.length || i < 0 || i >= playlist.length) return;
+        current = i;
+        audio.src = playlist[i].src;
+        audio.play().catch(() => {});
+        btn.textContent = 'Pause Music';
+    };
 
-function playTrackByIndex(index) {
-    if (!playlist.length || index < 0 || index >= playlist.length) return;
-    currentTrackIndex = index;
-    const track = playlist[currentTrackIndex];
-    backgroundMusic.src = track.src;
-    backgroundMusic.load();
-    backgroundMusic.play().catch(() => {});
-    if (musicToggle) musicToggle.textContent = 'Pause Music';
-}
-
-function playPreviousTrack() {
-    if (!playlist.length) return;
-    playTrackByIndex((currentTrackIndex - 1 + playlist.length) % playlist.length);
-}
-
-function playNextTrack() {
-    if (!playlist.length) return;
-    playTrackByIndex((currentTrackIndex + 1) % playlist.length);
-}
-
-function playRandomTrack() {
-    if (!playlist.length) return;
-    const randomIndex = Math.floor(Math.random() * playlist.length);
-    playTrackByIndex(randomIndex);
-}
-
-function setPlaylist(tracks) {
-    if (!Array.isArray(tracks)) return;
-    const normalized = tracks
-        .map(track => (typeof track === 'string'
-            ? { name: formatTrackName(track), src: `media/${track}` }
-            : track
-        ))
-        .filter(isSupportedAudioTrack);
-
-    if (!normalized.length) return;
-    playlist = normalized;
-    currentTrackIndex = 0;
-    backgroundMusic.src = playlist[0].src;
-    backgroundMusic.load();
-    if (musicToggle) musicToggle.textContent = 'Play Music';
-}
-
-function addUploadedTracks(files) {
-    if (!files || !files.length) return;
-
-    Array.from(files).forEach(file => {
-        const mimeType = (file.type || '').toLowerCase();
-        if (!mimeType.startsWith('audio/')) return;
-        const src = URL.createObjectURL(file);
-        playlist.push({ name: formatTrackName(file.name), src });
-    });
-}
-
-if (musicToggle && backgroundMusic) {
-    musicToggle.addEventListener('click', function() {
-        if (backgroundMusic.paused) {
-            backgroundMusic.play().catch(() => {});
-            musicToggle.textContent = 'Pause Music';
-        } else {
-            backgroundMusic.pause();
-            musicToggle.textContent = 'Play Music';
-        }
+    btn.addEventListener('click', () => {
+        audio.paused ? audio.play() : audio.pause();
     });
 
-    backgroundMusic.addEventListener('play', function() {
-        musicToggle.textContent = 'Pause Music';
-    });
+    audio.addEventListener('play', () => (btn.textContent = 'Pause Music'));
+    audio.addEventListener('pause', () => (btn.textContent = 'Play Music'));
+    audio.addEventListener('ended', () => play((current + 1) % playlist.length));
+    audio.addEventListener('error', () => play((current + 1) % playlist.length));
 
-    backgroundMusic.addEventListener('pause', function() {
-        musicToggle.textContent = 'Play Music';
-    });
+    prev?.addEventListener('click', () => play((current - 1 + playlist.length) % playlist.length));
+    next?.addEventListener('click', () => play((current + 1) % playlist.length));
+    rand?.addEventListener('click', () => play(Math.floor(Math.random() * playlist.length)));
 
-    backgroundMusic.addEventListener('error', function() {
-        playNextTrack();
-    });
-
-    backgroundMusic.addEventListener('ended', function() {
-        playNextTrack();
-    });
-
-    if (prevTrackButton) prevTrackButton.addEventListener('click', playPreviousTrack);
-    if (nextTrackButton) nextTrackButton.addEventListener('click', playNextTrack);
-    if (randomTrackButton) randomTrackButton.addEventListener('click', playRandomTrack);
-    if (uploadTrackInput) {
-        uploadTrackInput.addEventListener('change', function() {
-            addUploadedTracks(this.files);
+    upload?.addEventListener('change', function() {
+        Array.from(this.files).forEach(f => {
+            if (f.type.startsWith('audio/')) {
+                playlist.push({ name: f.name.replace(/\.[^.]+$/, ''), src: URL.createObjectURL(f) });
+            }
         });
-    }
+    });
 
     fetch(`media/playlist.json?v=${Date.now()}`)
-        .then(response => response.json())
-        .then(setPlaylist)
-        .catch(() => {
-            console.warn('Unable to load media/playlist.json');
-        });
+        .then(r => r.json())
+        .then(tracks => {
+            if (!Array.isArray(tracks)) return;
+            playlist = tracks
+                .map(t => typeof t === 'string' ? { name: t.replace(/\.[^.]+$/, ''), src: `media/${t}` } : t)
+                .filter(t => isAudio(t.src));
+            if (playlist.length) audio.src = playlist[0].src;
+        })
+        .catch(() => {});
 }
 
 
