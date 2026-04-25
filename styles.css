@@ -142,12 +142,6 @@ section > p {
     width: 100%;
 }
 
-#paintings-gallery h2 {
-    font-size: clamp(2rem, 3vw, 2.8rem);
-    white-space: nowrap;
-    line-height: 1.1;
-}
-
 .gallery-grid img {
     width: 100%;
     height: 100%;
@@ -265,17 +259,9 @@ footer p {
 
 /* Responsive */
 @media (max-width: 1200px) {
-    .gallery-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
 }
 
 @media (max-width: 768px) {
-    .gallery-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        grid-auto-rows: 34vw;
-    }
-
     .nav-menu {
         gap: 1rem;
         font-size: 0.85rem;
