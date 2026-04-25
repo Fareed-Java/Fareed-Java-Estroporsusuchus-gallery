@@ -9,26 +9,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Gallery with infinite scroll
 function initGallery(images) {
     const grid = document.querySelector('.gallery-grid');
-    let displayed = 0;
+    let index = 0;
     const batch = 20;
     const threshold = 250;
 
+    function appendImage({ folder, src }) {
+        const img = document.createElement('img');
+        img.src = folder + src;
+        img.alt = src;
+        img.dataset.full = folder + src;
+        img.className = 'gallery-image';
+        img.loading = 'lazy';
+        grid.appendChild(img);
+    }
+
     function loadBatch() {
-        const end = Math.min(displayed + batch, images.length);
-        for (let i = displayed; i < end; i++) {
-            const img = document.createElement('img');
-            img.src = images[i].folder + images[i].src;
-            img.alt = images[i].src;
-            img.dataset.full = images[i].folder + images[i].src;
-            img.classList.add('gallery-image');
-            img.loading = 'lazy';
-            grid.appendChild(img);
-        }
-        displayed = end;
+        images.slice(index, index + batch).forEach(appendImage);
+        index += batch;
     }
 
     function checkScroll() {
-        if (displayed >= images.length) return;
+        if (index >= images.length) return;
         if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - threshold) {
             loadBatch();
         }
