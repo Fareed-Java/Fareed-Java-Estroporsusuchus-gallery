@@ -17,22 +17,22 @@ async function fetchImagesFromGitHub() {
 
     const entries = await response.json();
     const imageEntries = [];
+    const folders = entries.filter(entry => entry.type === 'dir');
 
-    for (const entry of entries) {
-        if (entry.type !== 'dir') continue;
-        const dirResponse = await fetch(`${entry.url}?ref=${GITHUB_BRANCH}`);
-        if (!dirResponse.ok) continue;
+    await Promise.all(folders.map(async folder => {
+        const dirResponse = await fetch(`${folder.url}?ref=${GITHUB_BRANCH}`);
+        if (!dirResponse.ok) return;
 
         const files = await dirResponse.json();
-        for (const file of files) {
+        files.forEach(file => {
             if (file.type === 'file' && isImageFile(file.name)) {
                 imageEntries.push({
                     src: file.name,
-                    folder: `${entry.path}/`
+                    folder: `${folder.path}/`
                 });
             }
-        }
-    }
+        });
+    }));
 
     return imageEntries;
 }
@@ -44,6 +44,7 @@ async function loadImages() {
         const response = await fetch(`images.json?v=${Date.now()}`);
         if (response.ok) {
             images = await response.json();
+            console.info('Loaded images.json entries:', images.length);
         }
     } catch (error) {
         console.warn('Failed to load images.json:', error);
@@ -51,18 +52,21 @@ async function loadImages() {
 
     try {
         const githubImages = await fetchImagesFromGitHub();
+        console.info('GitHub images fetched:', githubImages.length);
         const seen = new Set(images.map(img => `${img.folder}${img.src}`));
-        for (const image of githubImages) {
+        githubImages.forEach(image => {
             const key = `${image.folder}${image.src}`;
             if (!seen.has(key)) {
                 seen.add(key);
                 images.push(image);
             }
-        }
+        });
     } catch (error) {
         console.warn('Failed to load images from GitHub folder listings:', error);
     }
 
+    window.galleryImageCount = images.length;
+    console.info('Gallery total images after merge:', images.length);
     return images;
 }
 
@@ -73,12 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     initMusic();
 });
 
-// Gallery with infinite scroll
+// Gallery
 function initGallery(images) {
     const grid = document.querySelector('.gallery-grid');
-    let index = 0;
-    const batch = 20;
-    const threshold = 250;
 
     function appendImage({ folder, src }) {
         const img = document.createElement('img');
@@ -90,21 +91,7 @@ function initGallery(images) {
         grid.appendChild(img);
     }
 
-    function loadBatch() {
-        images.slice(index, index + batch).forEach(appendImage);
-        index += batch;
-    }
-
-    function checkScroll() {
-        if (index >= images.length) return;
-        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - threshold) {
-            loadBatch();
-        }
-    }
-
-    loadBatch();
-    window.addEventListener('scroll', checkScroll);
-    window.addEventListener('resize', checkScroll);
+    images.forEach(appendImage);
 }
 
 // Lightbox modal
