@@ -45,6 +45,7 @@ function initLightbox() {
     const lightbox = document.getElementById('lightbox');
     const img = document.querySelector('.lightbox-image');
     let idx = -1;
+    let touchStart = 0;
 
     function getImages() {
         return Array.from(document.querySelectorAll('.gallery-image'));
@@ -55,11 +56,28 @@ function initLightbox() {
         if (!allImg[index]) return;
         idx = index;
         img.src = allImg[index].dataset.full;
+        img.onerror = () => {
+            img.style.display = 'none';
+            const retry = document.createElement('button');
+            retry.textContent = 'Retry';
+            retry.style.cssText = 'padding: 1rem; font-size: 1rem; cursor: pointer;';
+            retry.onclick = () => open(idx);
+            lightbox.appendChild(retry);
+        };
+        img.onload = () => {
+            img.style.display = 'block';
+            const retry = lightbox.querySelector('button');
+            if (retry) retry.remove();
+        };
         lightbox.classList.add('active');
     }
 
     function close() {
         lightbox.classList.remove('active');
+        img.onerror = null;
+        img.onload = null;
+        const retry = lightbox.querySelector('button');
+        if (retry) retry.remove();
     }
 
     function move(step) {
@@ -76,6 +94,19 @@ function initLightbox() {
     });
 
     document.querySelector('.lightbox-close').addEventListener('click', close);
+
+    // Swipe detection for mobile
+    lightbox.addEventListener('touchstart', e => {
+        touchStart = e.changedTouches[0].clientX;
+    }, false);
+
+    lightbox.addEventListener('touchend', e => {
+        const touchEnd = e.changedTouches[0].clientX;
+        const diff = touchStart - touchEnd;
+        if (Math.abs(diff) > 50) {
+            move(diff > 0 ? 1 : -1);
+        }
+    }, false);
 
     document.addEventListener('keydown', e => {
         if (!lightbox.classList.contains('active')) return;
