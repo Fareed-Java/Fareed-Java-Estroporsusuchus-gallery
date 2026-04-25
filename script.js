@@ -37,17 +37,67 @@ async function fetchImagesFromGitHub() {
     return imageEntries;
 }
 
+async function fetchImagesFromLocal() {
+    const baseUrl = '/images/';
+    const response = await fetch(baseUrl);
+    if (!response.ok) {
+        throw new Error(`Local directory request failed (${response.status})`);
+    }
+
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const links = Array.from(doc.querySelectorAll('a'));
+    const folders = links
+        .map(a => a.getAttribute('href'))
+        .filter(href => href && href.endsWith('/') && href !== '../')
+        .map(href => href.slice(0, -1)); // remove trailing /
+
+    const imageEntries = [];
+    await Promise.all(folders.map(async folder => {
+        const folderUrl = `${baseUrl}${folder}/`;
+        const folderResponse = await fetch(folderUrl);
+        if (!folderResponse.ok) return;
+
+        const folderHtml = await folderResponse.text();
+        const folderDoc = parser.parseFromString(folderHtml, 'text/html');
+        const fileLinks = Array.from(folderDoc.querySelectorAll('a'));
+        fileLinks.forEach(a => {
+            const href = a.getAttribute('href');
+            if (href && isImageFile(href)) {
+                imageEntries.push({
+                    src: href,
+                    folder: `images/${folder}/`
+                });
+            }
+        });
+    }));
+
+    return imageEntries.sort((a, b) => {
+        const folderCompare = a.folder.localeCompare(b.folder, undefined, { sensitivity: 'base' });
+        return folderCompare || a.src.localeCompare(b.src, undefined, { sensitivity: 'base' });
+    });
+}
+
 async function loadImages() {
     let images = [];
 
     try {
-        const response = await fetch(`images.json?v=${Date.now()}`);
-        if (response.ok) {
-            images = await response.json();
-            console.info('Loaded images.json entries:', images.length);
-        }
+        const localImages = await fetchImagesFromLocal();
+        images = localImages;
+        console.info('Local images scanned:', images.length);
     } catch (error) {
-        console.warn('Failed to load images.json:', error);
+        console.warn('Failed to scan local images:', error);
+        // Fallback to images.json if local scan fails
+        try {
+            const response = await fetch(`images.json?v=${Date.now()}`);
+            if (response.ok) {
+                images = await response.json();
+                console.info('Fallback to images.json entries:', images.length);
+            }
+        } catch (fallbackError) {
+            console.warn('Failed to load images.json fallback:', fallbackError);
+        }
     }
 
     try {
