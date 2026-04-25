@@ -133,12 +133,9 @@ section > p {
 }
 
 .gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(2cm, 1fr));
-    gap: 0;
+    columns: auto 10cm;
+    column-gap: 0;
     margin-bottom: 2rem;
-    grid-auto-rows: 10cm;
-    justify-content: center;
     width: 100%;
 }
 
@@ -149,6 +146,8 @@ section > p {
     object-fit: contain;
     cursor: pointer;
     transition: opacity 0.3s ease;
+    margin-bottom: 0;
+    break-inside: avoid;
 }
 
 .gallery-grid img:hover {
